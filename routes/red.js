@@ -9,7 +9,9 @@ router.get('/', async (req, res) => {
 
 router.get('/pelanggan', async (req, res) => {
     try {
-        const results = await client.query('SELECT * FROM pelanggan');
+        const results = await client.query(
+            'SELECT * FROM pelanggan' // Query yang akan dijalankan
+        );
         res.json(results.rows);
     } catch (err) {
         console.error(err);
