@@ -38,6 +38,7 @@ router.post('/testimoni', async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields.' });
         }
 
+
         if(rating == null)
             rating = 0;
 
@@ -62,6 +63,7 @@ router.delete('/testimoni', async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields.' });
         }
 
+
         if(rating == null)
             rating = 0;
 
@@ -77,7 +79,6 @@ router.delete('/testimoni', async (req, res) => {
         console.error('Error inserting testimonial:', err);
         res.status(500).json({ error: 'An error occurred while creating the testimonial.' });
     }
-    
 });
 
 // Mendapatkan semua voucher yang tersedia
@@ -143,6 +144,7 @@ router.put('/voucher', async (req, res) => {
             const one = 1;
             const addBy1 = temp.rows[0].telahdigunakan + one;
             const minusBy1 = temp.rows[0].kuotapenggunaan - one;
+
             
             if(minusBy1 < 0)
                 return res.status(400).json({ error: 'Quota for this voucher is 0' });
@@ -208,4 +210,3 @@ router.put('/voucher', async (req, res) => {
     }
 });
 export default router;
-
