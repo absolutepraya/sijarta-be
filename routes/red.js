@@ -113,15 +113,13 @@ router.put('/topup', async (req, res) => {
 })
 
 // TODO: Mendapatkan semua jasa yang harus dibayar oleh user
+router.get('/bayar-jasa', async (req, res) => {
+    const { userid } = req.query;
+});
 
 // TODO: Melakukan pembayaran jasa
 router.put('/bayar-jasa', async (req, res) => {
     const { userid, nominal, pesananid } = req.query;
-    try {
-
-    } catch (err) {
-
-    }
 });
 
 // Melakukan transaksi transfer saldo MyPay
@@ -169,6 +167,124 @@ router.put('/withdraw', async (req, res) => {
         await client.query('ROLLBACK');
         console.error(err);
         res.status(500).send('Error refunding balance');
+    }
+});
+
+// Mendapatkan semua pesanan dengan idstatus = 5db7572e-9dba-4467-b69b-c09ac3551f4a (Mencari pekerja terdekat)
+// Updated route to get all orders with additional category names
+router.get('/pesanan-mencari-pekerja-terdekat', async (req, res) => {
+    const { idkategori } = req.query;
+
+    try {
+        const results = await client.query(
+            `SELECT idtrpemesanan
+             FROM tr_pemesanan_status 
+             WHERE idstatus = '5db7572e-9dba-4467-b69b-c09ac3551f4a'`
+        );
+
+        if (results.rows.length === 0) {
+            return res.status(404).send('No available orders to do');
+        }
+
+        // Extract the IDs from results
+        const ids = results.rows.map(row => row.idtrpemesanan);
+
+        // Prepare placeholders for parameterized query
+        const placeholders = ids.map((_, index) => `$${index + 1}`).join(', ');
+
+        // Parameter index for idkategori
+        const kategoriParamIndex = ids.length + 1;
+
+        // Build the base query
+        let baseQuery = `
+            SELECT tr_pemesanan_jasa.*,
+                   "user".nama AS namapelanggan,
+                   subkategori_jasa.namasubkategori,
+                   kategori_jasa.namakategori
+            FROM tr_pemesanan_jasa
+            JOIN "user" ON tr_pemesanan_jasa.idpelanggan = "user".id
+            JOIN subkategori_jasa ON tr_pemesanan_jasa.idkategorijasa = subkategori_jasa.id
+            JOIN kategori_jasa ON subkategori_jasa.kategorijasaid = kategori_jasa.id
+            WHERE tr_pemesanan_jasa.id IN (${placeholders})
+        `;
+        const queryParams = [...ids];
+
+        if (idkategori !== undefined) {
+            baseQuery += ` AND tr_pemesanan_jasa.idkategorijasa = $${kategoriParamIndex}`;
+            queryParams.push(idkategori);
+        }
+
+        const pemesananResults = await client.query(baseQuery, queryParams);
+
+        res.json(pemesananResults.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error fetching data');
+    }
+});
+
+// Fungsi untuk mengupdate status pesanan
+router.put('/pesanan', async (req, res) => {
+    const { idpesanan, idstatus } = req.query;
+    try {
+        await client.query(
+            'UPDATE tr_pemesanan_status SET idstatus = $1 WHERE idtrpemesanan = $2',
+            [idstatus, idpesanan]
+        );
+        res.send('Status updated');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error updating status');
+    }
+});
+
+// Pesanan untuk update - excludes specific idstatus and matches idpekerja, also returns idstatus
+router.get('/pesanan-untuk-update', async (req, res) => {
+    const { idpekerja } = req.query;
+
+    try {
+        const results = await client.query(
+            `SELECT idtrpemesanan
+             FROM tr_pemesanan_status 
+             WHERE idstatus NOT IN (
+                 '5db7572e-9dba-4467-b69b-c09ac3551f4a',
+                 'db1c5a8e-0220-4b96-a9a3-a4a965ca2c5e',
+                 '8b6930c6-2d60-490d-a038-0ca3c5c44abe'
+             )`
+        );
+
+        if (results.rows.length === 0) {
+            return res.status(404).send('No available orders to update');
+        }
+
+        const ids = results.rows.map(row => row.idtrpemesanan);
+        const placeholders = ids.map((_, index) => `$${index + 1}`).join(', ');
+        let baseQuery = `
+            SELECT tr_pemesanan_jasa.*,
+                   tr_pemesanan_status.idstatus,
+                   "user".nama AS namapelanggan,
+                   subkategori_jasa.namasubkategori,
+                   kategori_jasa.namakategori
+            FROM tr_pemesanan_jasa
+            JOIN tr_pemesanan_status ON tr_pemesanan_jasa.id = tr_pemesanan_status.idtrpemesanan
+            JOIN "user" ON tr_pemesanan_jasa.idpelanggan = "user".id
+            JOIN subkategori_jasa ON tr_pemesanan_jasa.idkategorijasa = subkategori_jasa.id
+            JOIN kategori_jasa ON subkategori_jasa.kategorijasaid = kategori_jasa.id
+            WHERE tr_pemesanan_jasa.id IN (${placeholders})
+        `;
+        const queryParams = [...ids];
+
+        if (idpekerja !== undefined) {
+            baseQuery += ` AND tr_pemesanan_jasa.idpekerja = $${queryParams.length + 1}`;
+            queryParams.push(idpekerja);
+        }
+
+        const pemesananResults = await client.query(baseQuery, queryParams);
+
+        res.json(pemesananResults.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error fetching data');
     }
 });
 
