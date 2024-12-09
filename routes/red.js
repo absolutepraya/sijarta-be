@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import client from '../db.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
@@ -30,18 +31,6 @@ router.get('/', async (req, res) => {
     res.send('Red is working!');
 });
 
-router.get('/pelanggan', async (req, res) => {
-    try {
-        const results = await client.query(
-            'SELECT * FROM pelanggan' // Query yang akan dijalankan
-        );
-        res.json(results.rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error fetching data');
-    }
-});
-
 // Mendapatkan saldo user berdasarkan ID
 router.get('/user/:id', async (req, res) => {
     const userId = req.params.id;
@@ -61,8 +50,8 @@ router.get('/user/:id', async (req, res) => {
 });
 
 // Mendapatkan riwayat transaksi user berdasarkan ID
-router.get('/transaksi/:id', async (req, res) => {
-    const userId = req.params.id;
+router.get('/transaksi/:userid', async (req, res) => {
+    const userId = req.params.userid;
     try {
         const results = await client.query(
             `SELECT tr_mypay.nominal, tr_mypay.tgl, kategori_tr_mypay.nama AS kategori
@@ -95,24 +84,92 @@ router.get('/transaksi/:id', async (req, res) => {
     }
 });
 
-// Memfilter user berdasarkan jenis kelamin dan minimum saldo
-router.get('/filter', async (req, res) => {
-    const { sex, minsaldo } = req.query;
+// ID transaksi
+const IdTopUp = 'c260c2a1-52c8-47b3-9103-bdc34815e4aa';
+const IdPembayaranJasa = '7f0682ef-356e-40cd-9085-146e39394b45';
+const IdTransfer = 'b5fbb667-8279-429f-9e04-b0dca12d0bba';
+const IdWithdraw = '3675f15f-9d3b-454d-a049-443017108cb9';
+
+// Melakukan transaksi top-up saldo MyPay
+router.put('/topup', async (req, res) => {
+    const { userid, nominal } = req.query;
     try {
-        const results = await client.query(
-            `SELECT nama, nohp, jeniskelamin, saldomypay FROM "user"
-             WHERE jeniskelamin = $1 AND saldomypay >= $2`,
-            [sex, minsaldo]
+        await client.query('BEGIN');
+        await client.query(
+            'INSERT INTO tr_mypay (id, userid, tgl, nominal, kategoriid) VALUES ($1, $2, $3, $4, $5)',
+            [uuidv4(), userid, new Date(), nominal, IdTopUp]
         );
-        if (results.rows.length === 0) {
-            return res.status(404).send('No users found');
-        }
-        res.json(results.rows);
+        await client.query(
+            'UPDATE "user" SET saldomypay = saldomypay + $1 WHERE id = $2',
+            [nominal, userid]
+        );
+        await client.query('COMMIT');
+        res.send('Top-up successful');
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error(err);
-        res.status(500).send('Error fetching data');
+        res.status(500).send('Error topping up balance');
+    }
+})
+
+// TODO: Mendapatkan semua jasa yang harus dibayar oleh user
+
+// TODO: Melakukan pembayaran jasa
+router.put('/bayar-jasa', async (req, res) => {
+    const { userid, nominal, pesananid } = req.query;
+    try {
+
+    } catch (err) {
+
     }
 });
 
+// Melakukan transaksi transfer saldo MyPay
+router.put('/transfer', async (req, res) => {
+    const { senderid, receivernohp, nominal } = req.query;
+    try {
+        await client.query('BEGIN');
+        await client.query(
+            'INSERT INTO tr_mypay (id, userid, tgl, nominal, kategoriid) VALUES ($1, $2, $3, $4, $5)',
+            [uuidv4(), senderid, new Date(), nominal, IdTransfer]
+        );
+        await client.query(
+            'UPDATE "user" SET saldomypay = saldomypay - $1 WHERE id = $2',
+            [nominal, senderid]
+        );
+        await client.query(
+            'UPDATE "user" SET saldomypay = saldomypay + $1 WHERE nohp = $2',
+            [nominal, receivernohp]
+        );
+        await client.query('COMMIT');
+        res.send('Transfer successful');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).send('Error transferring balance');
+    }
+});
+
+// Melakukan withdraw saldo MyPay
+router.put('/withdraw', async (req, res) => {
+    const { userid, nominal } = req.query;
+    try {
+        await client.query('BEGIN');
+        await client.query(
+            'INSERT INTO tr_mypay (id, userid, tgl, nominal, kategoriid) VALUES ($1, $2, $3, $4, $5)',
+            [uuidv4(), userid, new Date(), nominal, IdWithdraw]
+        );
+        await client.query(
+            'UPDATE "user" SET saldomypay = saldomypay - $1 WHERE id = $2',
+            [nominal, userid]
+        );
+        await client.query('COMMIT');
+        res.send('Withdrawal successful');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).send('Error refunding balance');
+    }
+});
 
 export default router;
