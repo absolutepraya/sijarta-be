@@ -38,11 +38,12 @@ router.post('/testimoni', async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields.' });
         }
 
-        if (rating == null)
+
+        if(rating == null)
             rating = 0;
 
         await client.query(
-            'INSERT INTO TESTIMONI (IdTrPemesanan, Tgl, Teks, Rating) VALUES ($1, $2, $3, $4);',
+            'INSERT INTO TESTIMONI (IdTrPemesanan, Tgl, Teks, Rating) VALUES ($1, $2, $3, $4);', 
             [String(idtrpemesanan), String(tgl), String(teks), rating]
         );
 
@@ -62,12 +63,13 @@ router.delete('/testimoni', async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields.' });
         }
 
-        if (rating == null)
+
+        if(rating == null)
             rating = 0;
 
         await client.query(
             `DELETE FROM TESTIMONI 
-            WHERE IdTrPemesanan = $1 AND Tgl = $2 AND Teks = $3 AND Rating = $4;`,
+            WHERE IdTrPemesanan = $1 AND Tgl = $2 AND Teks = $3 AND Rating = $4;`, 
             [String(idtrpemesanan), String(tgl), String(teks), rating]
         );
 
@@ -77,7 +79,6 @@ router.delete('/testimoni', async (req, res) => {
         console.error('Error inserting testimonial:', err);
         res.status(500).json({ error: 'An error occurred while creating the testimonial.' });
     }
-
 });
 
 // Mendapatkan semua voucher yang tersedia
@@ -144,7 +145,8 @@ router.put('/voucher', async (req, res) => {
             const addBy1 = temp.rows[0].telahdigunakan + one;
             const minusBy1 = temp.rows[0].kuotapenggunaan - one;
 
-            if (minusBy1 < 0)
+            
+            if(minusBy1 < 0)
                 return res.status(400).json({ error: 'Quota for this voucher is 0' });
 
             await client.query(`UPDATE TR_PEMBELIAN_VOUCHER 
@@ -180,8 +182,8 @@ router.put('/voucher', async (req, res) => {
                 const one = 1;
                 const addBy1 = temp.rows[0].telahdigunakan + one;
                 const minusBy1 = temp.rows[0].kuotapenggunaan - one;
-
-                if (minusBy1 < 0)
+            
+                if(minusBy1 < 0)
                     return res.status(400).json({ error: 'Quota for this voucher is 0' });
 
                 await client.query(`UPDATE TR_PEMBELIAN_VOUCHER  
@@ -193,7 +195,7 @@ router.put('/voucher', async (req, res) => {
                 const newSaldo = userSaldo - voucherHarga;
                 await client.query('UPDATE "user" SET SaldoMyPay = $1 WHERE Id = $2', [newSaldo, userid]);
 
-                await client.query('COMMIT');
+                await client.query('COMMIT');           
 
                 return res.json({ message: 'Voucher purchased successfully!', voucher, newSaldo });
             } else {
