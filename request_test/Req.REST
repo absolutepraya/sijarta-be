@@ -1,3 +1,4 @@
 // Ini file buat testing API, kalo kalian gapake dibiarin sajah. - Abhip
 
 PUT http://127.0.0.1:5000/red/voucher?userid=dac79134-f616-4634-9639-f01410d5b973&voucherid=SHANE
+GET http://localhost:5000/yellow/login?nohp=081234567894&pwd=password5

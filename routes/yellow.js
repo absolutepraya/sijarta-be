@@ -29,7 +29,13 @@ router.get('/login', async (req, res) => {
         if (results.rows.length === 0) {
             return res.status(404).send('User not found');
         }
-        res.json(results.rows[0]);
+        const result = results.rows[0];
+        const userId = result.id;
+        const roles = await client.query(
+            "SELECT id, 'pelanggan' AS role FROM pelanggan WHERE id = $1 UNION SELECT id, 'pekerja' AS role FROM pekerja WHERE id = $1", [userId]
+        )
+        result.role = roles.rows[0].role;
+        res.json(result);
     } catch (err) {
         res.status(500).send('Error fetching data');
     }
