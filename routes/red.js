@@ -74,6 +74,39 @@ router.get('/transaksi/:id', async (req, res) => {
         if (results.rows.length === 0) {
             return res.status(404).send('No transactions found');
         }
+
+        // Convert ISO date to readable format
+        const formattedResults = results.rows.map(row => ({
+            ...row,
+            tgl: new Date(row.tgl).toLocaleString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+            }),
+        }));
+
+        res.json(formattedResults);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error fetching data');
+    }
+});
+
+// Memfilter user berdasarkan jenis kelamin dan minimum saldo
+router.get('/filter', async (req, res) => {
+    const { sex, minsaldo } = req.query;
+    try {
+        const results = await client.query(
+            `SELECT nama, nohp, jeniskelamin, saldomypay FROM "user"
+             WHERE jeniskelamin = $1 AND saldomypay >= $2`,
+            [sex, minsaldo]
+        );
+        if (results.rows.length === 0) {
+            return res.status(404).send('No users found');
+        }
         res.json(results.rows);
     } catch (err) {
         console.error(err);

@@ -19,6 +19,22 @@ router.get('/pelanggan', async (req, res) => {
     }
 });
 
+router.get('/login', async (req, res) => {
+    const { nohp, pwd } = req.query;
+    try {
+        const results = await client.query(
+            'SELECT * FROM "user" WHERE nohp = $1 AND pwd = $2',
+            [nohp, pwd]
+        );
+        if (results.rows.length === 0) {
+            return res.status(404).send('User not found');
+        }
+        res.json(results.rows[0]);
+    } catch (err) {
+        res.status(500).send('Error fetching data');
+    }
+});
+
 // Tambahkan fungsi lainnya di sini
 
 export default router;

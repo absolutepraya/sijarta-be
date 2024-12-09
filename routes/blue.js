@@ -9,6 +9,8 @@ router.get('/', async (req, res) => {
 
 
 router.get('/testimoni', async (req, res) => {
+// Mendapatkan semua pelanggan
+router.get('/pelanggan', async (req, res) => {
     try {
         const results = await client.query(
             `SELECT trpj.IdPelanggan, trps.IdTrPemesanan, trpj.Sesi, trpj.TotalBiaya, u.Nama, sp.Status, t.Tgl
@@ -23,6 +25,41 @@ router.get('/testimoni', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).send('Error fetching data');
+    }
+});
+
+// Mendapatkan semua voucher yang tersedia
+router.get('/voucher', async (req, res) => {
+    try {
+        const results = await client.query(
+            'SELECT * FROM voucher'
+        );
+        res.json(results.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error fetching data');
+    }
+});
+
+// Membuat voucher baru
+router.post('/voucher', async (req, res) => {
+    const { kode, jmlhariberlaku, kuotapenggunaan, harga, potongan, mintrpemesanan } = req.query;
+    try {
+        // Pertama, harus bikin diskon baru sebagai syarat voucher
+        await client.query(
+            'INSERT INTO diskon (kode, potongan, mintrpemesanan) VALUES ($1, $2, $3)',
+            [kode, potongan, mintrpemesanan]
+        );
+        // Kedua, baru bikin voucher baru
+        await client.query(
+            'INSERT INTO voucher (kode, jmlhariberlaku, kuotapenggunaan, harga) VALUES ($1, $2, $3, $4)',
+            [kode, jmlhariberlaku, kuotapenggunaan, harga]
+        );
+        // Pesan berhasil
+        res.json("Data inserted successfully!");
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error inserting data');
     }
 });
 
